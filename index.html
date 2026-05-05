@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Telão Evento</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0b1220;
+    color: white;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.header img {
+    height: 80px;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    height: calc(100vh - 120px);
+}
+
+.left {
+    padding: 20px;
+    overflow: hidden;
+}
+
+.right {
+    padding: 20px;
+}
+
+.nome {
+    font-size: 28px;
+    margin: 10px 0;
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #1e293b;
+    padding-bottom: 5px;
+    animation: fadeIn 0.5s;
+}
+
+.tipo {
+    font-size: 18px;
+    background: #2563eb;
+    padding: 4px 10px;
+    border-radius: 10px;
+}
+
+@keyframes fadeIn {
+    from {opacity: 0; transform: translateY(10px);}
+    to {opacity: 1; transform: translateY(0);}
+}
+
+.total {
+    font-size: 50px;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+canvas {
+    background: white;
+    border-radius: 10px;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+    <!-- coloque aqui o logo -->
+    <img src="https://via.placeholder.com/300x80?text=Sandia+Soluções">
+</div>
+
+<div class="container">
+
+    <div class="left">
+        <div id="nomes"></div>
+    </div>
+
+    <div class="right">
+        <div class="total" id="total">0</div>
+        <canvas id="grafico"></canvas>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR1r835s8237g4bswlE2545xYwhEx3nAN_Ojoj_DwK3J04682hbxijUyWIO_qJplsztYYro7_wZYFkV/pub?gid=993826484&single=true&output=csv";
+
+let chart;
+
+async function carregarDados() {
+    const response = await fetch(url);
+    const texto = await response.text();
+
+    const linhas = texto.split("\n");
+
+    let nomesDiv = document.getElementById("nomes");
+    nomesDiv.innerHTML = "";
+
+    let nomes = [];
+
+    // =========================
+    // NOMES (coluna E, linha 12+)
+    // =========================
+    for (let i = 11; i < linhas.length; i++) {
+        let colunas = linhas[i].split(",");
+        let nome = colunas[4]; // coluna E
+
+        if (nome && nome.trim() !== "") {
+            nomes.push(nome);
+        }
+    }
+
+    nomes.reverse().slice(0, 12).forEach(nome => {
+        let div = document.createElement("div");
+        div.className = "nome";
+        div.textContent = nome;
+        nomesDiv.appendChild(div);
+    });
+
+    document.getElementById("total").textContent = nomes.length;
+
+    // =========================
+    // GRÁFICO (P até S)
+    // =========================
+    let labels = [];
+    let presentes = [];
+    let ausentes = [];
+    let cancelados = [];
+
+    for (let i = 3; i <= 20; i++) {
+        let colunas = linhas[i].split(",");
+
+        let tipo = colunas[15]; // P
+        let p = parseInt(colunas[16]) || 0; // Q
+        let a = parseInt(colunas[17]) || 0; // R
+        let c = parseInt(colunas[18]) || 0; // S
+
+        if (tipo && tipo !== "0") {
+            labels.push(tipo);
+            presentes.push(p);
+            ausentes.push(a);
+            cancelados.push(c);
+        }
+    }
+
+    atualizarGrafico(labels, presentes, ausentes, cancelados);
+}
+
+function atualizarGrafico(labels, p, a, c) {
+    if (chart) chart.destroy();
+
+    chart = new Chart(document.getElementById("grafico"), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: 'Presente', data: p },
+                { label: 'Ausente', data: a },
+                { label: 'Cancelado', data: c }
+            ]
+        },
+        options: {
+            plugins: {
+                legend: {
+                    labels: { color: "white" }
+                }
+            },
+            scales: {
+                x: { ticks: { color: "white" } },
+                y: { ticks: { color: "white" } }
+            }
+        }
+    });
+}
+
+setInterval(carregarDados, 5000);
+carregarDados();
+</script>
+
+</body>
+</html>
